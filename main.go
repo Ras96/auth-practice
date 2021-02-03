@@ -30,7 +30,7 @@ var (
 )
 
 func main() {
-	_db, err := sqlx.Connect("mysql", fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8&parsetime=True&loc=Local", os.Getenv("DB_USERNAME"), os.Getenv("DB_PASSWORD"), os.Getenv("DB_HOSTNAME"), os.Getenv("DB?PORT"), os.Getenv("DB_DATABASE")))
+	_db, err := sqlx.Connect("mysql", fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8&parseTime=True&loc=Local", os.Getenv("DB_USERNAME"), os.Getenv("DB_PASSWORD"), os.Getenv("DB_HOSTNAME"), os.Getenv("DB_PORT"), os.Getenv("DB_DATABASE")))
 	if err != nil {
 		log.Fatalf("Cannot Connect to Database: %s", err)
 	}
@@ -59,20 +59,20 @@ func main() {
 }
 
 type LoginRequestBody struct {
-	Username string `json:"username,omitempty"  form:"username"`
-	Password string `json:"password,omitempty"  form:"password"`
+	Username string `json:"username,omitempty" form:"username"`
+	Password string `json:"password,omitempty" form:"password"`
 }
 
 type User struct {
-	Username string `json:"username,omitempty"  db:"Username"`
-	HashedPass string `json:"-"  db:"password"`
+	Username   string `json:"username,omitempty"  db:"Username"`
+	HashedPass string `json:"-"  db:"HashedPass"`
 }
 
 func postSignUpHandler(c echo.Context) error {
 	req := LoginRequestBody{}
 	c.Bind(&req)
 
-	//
+	// もう少し真面目にバリデーションするべき
 	if req.Password == "" || req.Username == "" {
 		// エラーは真面目に返すべき
 		return c.String(http.StatusBadRequest, "項目が空です")
@@ -83,7 +83,7 @@ func postSignUpHandler(c echo.Context) error {
 		return c.String(http.StatusInternalServerError, fmt.Sprintf("bcrypt generate error: %v", err))
 	}
 
-	//ユーザーの存在チェック
+	// ユーザーの存在チェック
 	var count int
 
 	err = db.Get(&count, "SELECT COUNT(*) FROM users WHERE Username=?", req.Username)
@@ -92,7 +92,7 @@ func postSignUpHandler(c echo.Context) error {
 	}
 
 	if count > 0 {
-		return c.String(http.StatusConflict, "ユーザーがすでに存在しています")
+		return c.String(http.StatusConflict, "ユーザーが既に存在しています")
 	}
 
 	_, err = db.Exec("INSERT INTO users (Username, HashedPass) VALUES (?, ?)", req.Username, hashedPass)
@@ -121,7 +121,7 @@ func postLoginHandler(c echo.Context) error {
 		}
 	}
 
-	sess,  err := session.Get("sessions", c)
+	sess, err := session.Get("sessions", c)
 	if err != nil {
 		fmt.Println(err)
 		return c.String(http.StatusInternalServerError, "something wrong in getting session")
