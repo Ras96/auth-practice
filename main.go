@@ -6,7 +6,9 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
+	"github.com/gofrs/uuid"
 	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -23,6 +25,12 @@ type City struct {
 	CountryCode sql.NullString `json:"countryCode,omitempty"  db:"CountryCode"`
 	District    sql.NullString `json:"district,omitempty"  db:"District"`
 	Population  sql.NullInt64  `json:"population,omitempty"  db:"Population"`
+}
+
+type Todo struct {
+	ID        uuid.UUID `json:"id,omitempty"  db:"ID"`
+	Title     string    `json:"title,omitempty"  db:"Title"`
+	CreatedAt time.Time `json:"createdAt,omitempty"  db:"CreatedAt"`
 }
 
 var (
@@ -50,6 +58,10 @@ func main() {
 	})
 	e.POST("/login", postLoginHandler)
 	e.POST("/signup", postSignUpHandler)
+
+	todo := e.Group("/todo")
+	todo.GET("", getTodoHandler)
+	todo.POST("", postTodoHandler)
 
 	withLogin := e.Group("")
 	withLogin.Use(checkLogin)
@@ -130,6 +142,40 @@ func postLoginHandler(c echo.Context) error {
 	sess.Save(c.Request(), c.Response())
 
 	return c.NoContent(http.StatusOK)
+}
+
+func getTodoHandler(c echo.Context) error {
+	todos := []Todo{}
+	err := db.Select(&todos, "SELECT * FROM todos")
+	if err != nil {
+		return c.String(http.StatusInternalServerError, fmt.Sprintf("db error: %v", err))
+	}
+	if len(todos) == 0 {
+		return c.NoContent(http.StatusNotFound)
+	}
+
+	return c.JSON(http.StatusOK, todos)
+}
+
+func postTodoHandler(c echo.Context) error {
+	todo := Todo{}
+	c.Bind(&todo)
+
+	var count int
+	err := db.Get(&count, "SELECT COUNT(*) FROM todos WHERE title = ?", todo.Title)
+	if err != nil {
+		return c.String(http.StatusInternalServerError, fmt.Sprintf("db error: %v", err))
+	}
+
+	if count > 0 {
+		return c.String(http.StatusConflict, "同名のタスクが既に追加されています")
+	}
+
+	_, err = db.Exec("INSERT INTO todos (Title) VALUES (?)", todo.Title)
+	if err != nil {
+		return c.String(http.StatusInternalServerError, fmt.Sprintf("db error: %v", err))
+	}
+	return c.NoContent(http.StatusCreated)
 }
 
 func checkLogin(next echo.HandlerFunc) echo.HandlerFunc {
