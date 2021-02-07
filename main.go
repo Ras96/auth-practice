@@ -72,7 +72,7 @@ func main() {
 	withLogin.Use(checkLogin)
 	withLogin.GET("/cities/:cityName", getCityInfoHandler)
 	withLogin.GET("/countries", getCountriesHandler)
-	withLogin.GET("/countries/:countryName", getCountryInfoHandler)
+	withLogin.GET("/countries/:countryName", getCitiesFromCountryHandler)
 	withLogin.GET("/whoami", getWhoAmIHandler)
 
 	e.Start(":4000")
@@ -225,7 +225,7 @@ func getCountriesHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, countries)
 }
 
-func getCountryInfoHandler(c echo.Context) error {
+func getCitiesFromCountryHandler(c echo.Context) error {
 	countryName := c.Param("countryName")
 
 	country := Country{}
@@ -236,11 +236,18 @@ func getCountryInfoHandler(c echo.Context) error {
 		return c.String(http.StatusInternalServerError, fmt.Sprintf("db error: %v", err))
 	}
 
-	err = db.Select(&cities, "SELECT * FROM city WHERE CountryCode = ?", country.Code)
+	err = db.Select(&cities, "SELECT Name FROM city WHERE CountryCode = ?", country.Code)
 	if err != nil {
 		return c.String(http.StatusInternalServerError, fmt.Sprintf("db error: %v", err))
 	}
-	return c.JSON(http.StatusOK, country)
+
+	result := []string{}
+	for _, v := range cities {
+		if v.Name.Valid {
+			result = append(result, v.Name.String)
+		}
+	}
+	return c.JSON(http.StatusOK, result)
 }
 
 type Me struct {
