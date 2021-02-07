@@ -27,6 +27,24 @@ type City struct {
 	Population  sql.NullInt64  `json:"population,omitempty"  db:"Population"`
 }
 
+type Country struct {
+	Code           string  `json:"code,omitempty"  db:"Code"`
+	Name           string  `json:"name,omitempty"  db:"Name"`
+	Continent      string  `json:"continent,omitempty"  db:"Continent"`
+	Region         string  `json:"region,omitempty"  db:"Region"`
+	SurfaceArea    float64 `json:"surfaceArea,omitempty"  db:"SurfaceArea"`
+	IndepYear      int     `json:"indepYear,omitempty"  db:"IndepYear"`
+	Population     int     `json:"population,omitempty"  db:"Population"`
+	LifeExpectancy float64 `json:"lifeExpectancy,omitempty"  db:"LifeExpectancy"`
+	GNP            float64 `json:"gnp,omitempty"  db:"GNP"`
+	GNPOld         float64 `json:"gnpOld,omitempty"  db:"GNPOld"`
+	LocalName      string  `json:"localName,omitempty"  db:"LocalName"`
+	GovernmentForm string  `json:"governmentForm,omitempty"  db:"GovernmentForm"`
+	HeadOfState    string  `json:"headOfState,omitempty"  db:"HeadOfState"`
+	Capital        int     `json:"capital,omitempty"  db:"Capital"`
+	Code2          string  `json:"code2,omitempty"  db:"Code2"`
+}
+
 type Todo struct {
 	ID        uuid.UUID `json:"id,omitempty"  db:"ID"`
 	Title     string    `json:"title,omitempty"  db:"Title"`
@@ -66,6 +84,8 @@ func main() {
 	withLogin := e.Group("")
 	withLogin.Use(checkLogin)
 	withLogin.GET("/cities/:cityName", getCityInfoHandler)
+	withLogin.GET("/countries", getCountriesHandler)
+	withLogin.GET("/countries/:countryName", getCountryInfoHandler)
 	withLogin.GET("/whoami", getWhoAmIHandler)
 
 	e.Start(":4000")
@@ -206,6 +226,28 @@ func getCityInfoHandler(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, city)
+}
+
+
+func getCountriesHandler(c echo.Context) error {
+	countries := []Country{}
+
+	err := db.Select(&countries, "SELECT Name FROM country")
+	if err != nil {
+		return c.String(http.StatusInternalServerError, fmt.Sprintf("db error: %v", err))
+	}
+	return c.JSON(http.StatusOK, countries)
+}
+
+func getCountryInfoHandler(c echo.Context) error {
+	countryName := c.Param("countryName")
+
+	country := Country{}
+	err := db.Get(&country, "SELECT * FROM country WHERE Name = ?", countryName)
+	if err != nil {
+		return c.String(http.StatusInternalServerError, fmt.Sprintf("db error: %v", err))
+	}
+	return c.JSON(http.StatusOK, country)
 }
 
 type Me struct {
