@@ -236,7 +236,7 @@ func getCountryInfoHandler(c echo.Context) error {
 		return c.String(http.StatusInternalServerError, fmt.Sprintf("db error: %v", err))
 	}
 
-	err = db.Select(&cities, "SELECT * FROM city WHERE Code = ?", country.Code)
+	err = db.Select(&cities, "SELECT * FROM city WHERE CountryCode = ?", country.Code)
 	if err != nil {
 		return c.String(http.StatusInternalServerError, fmt.Sprintf("db error: %v", err))
 	}
