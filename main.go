@@ -28,21 +28,8 @@ type City struct {
 }
 
 type Country struct {
-	Code           string  `json:"code,omitempty"  db:"Code"`
-	Name           string  `json:"name,omitempty"  db:"Name"`
-	Continent      string  `json:"continent,omitempty"  db:"Continent"`
-	Region         string  `json:"region,omitempty"  db:"Region"`
-	SurfaceArea    float64 `json:"surfaceArea,omitempty"  db:"SurfaceArea"`
-	IndepYear      int     `json:"indepYear,omitempty"  db:"IndepYear"`
-	Population     int     `json:"population,omitempty"  db:"Population"`
-	LifeExpectancy float64 `json:"lifeExpectancy,omitempty"  db:"LifeExpectancy"`
-	GNP            float64 `json:"gnp,omitempty"  db:"GNP"`
-	GNPOld         float64 `json:"gnpOld,omitempty"  db:"GNPOld"`
-	LocalName      string  `json:"localName,omitempty"  db:"LocalName"`
-	GovernmentForm string  `json:"governmentForm,omitempty"  db:"GovernmentForm"`
-	HeadOfState    string  `json:"headOfState,omitempty"  db:"HeadOfState"`
-	Capital        int     `json:"capital,omitempty"  db:"Capital"`
-	Code2          string  `json:"code2,omitempty"  db:"Code2"`
+	Code string `json:"code,omitempty"  db:"Code"`
+	Name string `json:"name,omitempty" db:"Name"`
 }
 
 type Todo struct {
@@ -228,7 +215,6 @@ func getCityInfoHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, city)
 }
 
-
 func getCountriesHandler(c echo.Context) error {
 	countries := []Country{}
 
@@ -243,7 +229,14 @@ func getCountryInfoHandler(c echo.Context) error {
 	countryName := c.Param("countryName")
 
 	country := Country{}
-	err := db.Get(&country, "SELECT * FROM country WHERE Name = ?", countryName)
+	cities := []City{}
+
+	err := db.Get(&country, "SELECT Code FROM country WHERE Name = ? LIMIT 1", countryName)
+	if err != nil {
+		return c.String(http.StatusInternalServerError, fmt.Sprintf("db error: %v", err))
+	}
+
+	err = db.Select(&cities, "SELECT * FROM city WHERE Code = ?", country.Code)
 	if err != nil {
 		return c.String(http.StatusInternalServerError, fmt.Sprintf("db error: %v", err))
 	}
